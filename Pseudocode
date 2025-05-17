@@ -1,0 +1,234 @@
+START
+
+CLASS FrozenFoodItem
+    METHOD __init__(name, category, quantity, expiry_date, cost_per_unit)
+        SET self.name = name
+        SET self.category = category
+        SET self.quantity = quantity
+        PARSE expiry_date string and SET self.expiry_date
+        SET self.cost_per_unit = cost_per_unit
+
+    METHOD __str__()
+        FORMAT expiry_date as string expiry_str
+        CALCULATE total_cost = quantity * cost_per_unit
+        RETURN formatted string with item details including name, category, expiry_str, quantity, cost_per_unit, total_cost
+
+CLASS InventoryManager
+    METHOD __init__()
+        INITIALIZE self.inventory as dictionary defaulting to empty queue per category
+
+    METHOD add_item(name, category, quantity, expiry_date, cost_per_unit)
+        CREATE FrozenFoodItem with given parameters
+        ADD item to self.inventory[category] queue
+        SORT self.inventory[category] queue by item.expiry_date (earliest first)
+        PRINT confirmation message
+
+    METHOD remove_item(category, quantity_needed)
+        IF category NOT in inventory OR queue empty
+            PRINT no items found message
+            RETURN
+        WHILE quantity_needed > 0 AND queue not empty
+            SET oldest_item = front of queue
+            IF oldest_item.quantity <= quantity_needed
+                SUBTRACT oldest_item.quantity from quantity_needed
+                PRINT removal message for oldest_item
+                REMOVE oldest_item from queue
+            ELSE
+                SUBTRACT quantity_needed from oldest_item.quantity
+                PRINT removal message for quantity_needed
+                SET quantity_needed = 0
+
+    METHOD track_inventory()
+        PRINT inventory header
+        IF inventory empty
+            PRINT inventory empty message
+            RETURN
+        FOR each category, queue in inventory
+            PRINT category header
+            FOR each item in queue
+                PRINT item details
+
+    METHOD alert_expiring_items()
+        SET today = current date
+        SET found = FALSE
+        PRINT expiry alerts header
+        FOR each queue in inventory
+            FOR each item in queue
+                CALCULATE days_left = difference between item.expiry_date and today in days
+                IF days_left between 0 and 30
+                    SET found = TRUE
+                    PRINT item details and days_left
+        IF found is FALSE
+            PRINT no items nearing expiry message
+
+CLASS InventorySearchSort
+    METHOD __init__(inventory_manager)
+        SET self.inventory_manager = inventory_manager
+
+    METHOD search_item_by_name(name)
+        CREATE empty list results
+        FOR each queue in inventory_manager.inventory
+            FOR each item in queue
+                IF item.name equals name (case insensitive)
+                    ADD item to results
+        RETURN results
+
+    METHOD search_by_category(category)
+        RETURN list of items in inventory_manager.inventory[category], or empty list if category not found
+
+    METHOD sort_inventory(by = 'expiry')
+        CREATE empty list all_items
+        FOR each queue in inventory_manager.inventory
+            ADD all items in queue to all_items
+        IF by == 'expiry'
+            SORT all_items ascending by expiry_date
+        ELSE IF by == 'quantity'
+            SORT all_items descending by quantity
+        ELSE IF by == 'name'
+            SORT all_items ascending by name (case insensitive)
+        RETURN all_items
+
+    METHOD display_sorted_inventory(by = 'expiry')
+        SET sorted_items = CALL sort_inventory(by)
+        PRINT header showing sorting criteria
+        FOR each item in sorted_items
+            PRINT item details
+
+CLASS PerformanceAnalyzer
+    METHOD __init__()
+        INITIALIZE empty list logs
+
+    METHOD log_action(action_type, item_name)
+        GET current timestamp as string
+        ADD (timestamp, action_type, item_name) tuple to logs
+
+    METHOD show_logs()
+        PRINT action logs header
+        FOR each log in logs
+            PRINT log timestamp, action_type, and item_name
+
+    METHOD report_inventory_health(inventory_manager)
+        SET total_items = 0
+        SET soon_expiring = 0
+        SET today = current date
+        FOR each queue in inventory_manager.inventory
+            FOR each item in queue
+                ADD item.quantity to total_items
+                CALCULATE days_left = difference between item.expiry_date and today
+                IF days_left between 0 and 30
+                    ADD item.quantity to soon_expiring
+        PRINT inventory health report with total_items and soon_expiring counts
+
+    METHOD analyze_complexity()
+        PRINT theoretical time complexity of:
+            Add Item: O(log n)
+            Remove Item: O(1) per removal
+            Search Item: O(n)
+            Sort Inventory: O(n log n)
+
+FUNCTION get_valid_int_input(prompt)
+    LOOP until valid input
+        TRY to convert input to integer
+        IF success
+            RETURN integer
+        ELSE
+            PRINT invalid input message
+
+FUNCTION get_valid_float_input(prompt)
+    LOOP until valid input
+        TRY to convert input to float
+        IF success
+            RETURN float
+        ELSE
+            PRINT invalid input message
+
+FUNCTION get_valid_date_input(prompt)
+    LOOP until valid input
+        GET input string
+        TRY to parse date string (format: YYYY/MM/DD)
+        IF success
+            RETURN date string
+        ELSE
+            PRINT invalid date format message
+
+FUNCTION main()
+    CREATE InventoryManager instance as inventory
+    CREATE InventorySearchSort instance with inventory
+    CREATE PerformanceAnalyzer instance as performance
+
+    LOOP indefinitely
+        PRINT menu options:
+            1. Add Item
+            2. Remove Item
+            3. Track Inventory
+            4. Alert Expiring Items
+            5. Search Item by Name
+            6. Search Item by Category
+            7. Sort and Display Inventory
+            8. Show Action Logs
+            9. Inventory Health Report
+            10. Analyze Time/Space Complexity
+            0. Exit
+
+        GET user choice as string
+
+        IF choice == "1"
+            GET item name from user
+            GET category from user
+            GET quantity using get_valid_int_input
+            GET expiry_date using get_valid_date_input
+            GET cost_per_unit using get_valid_float_input
+            CALL inventory.add_item(...) with inputs
+            CALL performance.log_action("Add", item name)
+
+        ELSE IF choice == "2"
+            GET category from user
+            GET quantity to remove using get_valid_int_input
+            CALL inventory.remove_item(category, quantity)
+            CALL performance.log_action("Remove", category)
+
+        ELSE IF choice == "3"
+            CALL inventory.track_inventory()
+
+        ELSE IF choice == "4"
+            CALL inventory.alert_expiring_items()
+
+        ELSE IF choice == "5"
+            GET product name to search from user
+            CALL search_sort.search_item_by_name(name)
+            IF results found
+                PRINT all found items
+            ELSE
+                PRINT no items found message
+
+        ELSE IF choice == "6"
+            GET category to search from user
+            CALL search_sort.search_by_category(category)
+            IF results found
+                PRINT all found items
+            ELSE
+                PRINT no items found message
+
+        ELSE IF choice == "7"
+            PROMPT for sort criteria (expiry/quantity/name)
+            CALL search_sort.display_sorted_inventory(by=criteria)
+
+        ELSE IF choice == "8"
+            CALL performance.show_logs()
+
+        ELSE IF choice == "9"
+            CALL performance.report_inventory_health(inventory)
+
+        ELSE IF choice == "10"
+            CALL performance.analyze_complexity()
+
+        ELSE IF choice == "0"
+            PRINT exit message
+            BREAK loop
+
+        ELSE
+            PRINT invalid choice message
+
+CALL main()
+
+END
